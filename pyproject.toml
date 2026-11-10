@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "moodclock"
+version = "1.0.0"
+description = "A clean terminal clock whose theme shifts with time, weather, or mood"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [{name = "Moodclock"}]
+dependencies = [
+    "rich>=13.0",
+    "requests>=2.28",
+]
+keywords = ["clock", "terminal", "tui", "weather", "theme", "mood", "konsole"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+    "Topic :: Desktop Environment",
+]
+
+[project.scripts]
+moodclock = "moodclock:main"
+
+[project.urls]
+Homepage = "https://github.com/moodclock/moodclock"
+
+[tool.setuptools]
+py-modules = ["moodclock"]
