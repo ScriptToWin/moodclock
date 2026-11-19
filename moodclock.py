@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
-Moodclock — terminal clock that becomes the weather / mood.
-Just time + atmosphere. No city, no degrees.
+mdc — terminal clock that becomes the weather / mood.
+Clean ASCII art, fullscreen terminal layout, and animated coffee/weather.
 """
 
 from __future__ import annotations
 
 import argparse
+import random
+import shutil
 import sys
 import time
 from datetime import datetime
@@ -30,93 +32,97 @@ except ImportError:
     sys.exit(1)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Themes + ASCII atmospheres
+# Themes + ASCII Atmospheres (No Emojis, Pure ASCII)
 # ─────────────────────────────────────────────────────────────────────────────
 
 THEMES: Dict[str, Dict] = {
     "clear": {
-        "name": "Clear",
-        "primary": "#FFD166",
-        "accent":  "#F4A261",
-        "muted":   "#E9C46A",
+        "name": "[ Shiny Sparkle ]",
+        "primary": "#FFB7B2",
+        "accent":  "#FFDAC1",
+        "muted":   "#E29578",
         "art": [
             "            \\  |  /            ",
             "          \\  .-.  /            ",
-            "        — (  ☼  ) —            ",
+            "        --- ( * ) ---          ",
             "          /  '-'  \\            ",
             "            /  |  \\            ",
         ],
     },
     "sunny": {
-        "name": "Sunny",
-        "primary": "#FFBE0B",
-        "accent":  "#FB5607",
-        "muted":   "#FFD166",
+        "name": "[ Kawaii Sunshine ]",
+        "primary": "#FFB7B2",
+        "accent":  "#FF9AA2",
+        "muted":   "#E29578",
         "art": [
             "            \\  |  /            ",
             "          \\  .-.  /            ",
-            "        — (  ☼  ) —            ",
+            "        --- ( v ) ---          ",
             "          /  '-'  \\            ",
             "            /  |  \\            ",
         ],
     },
     "cloudy": {
-        "name": "Cloudy",
-        "primary": "#8D99AE",
-        "accent":  "#A8DADC",
-        "muted":   "#6C757D",
+        "name": "[ Soft Fluffy Clouds ]",
+        "primary": "#B5E2FA",
+        "accent":  "#EDF6F9",
+        "muted":   "#83C5BE",
         "art": [
             "                               ",
-            "       .--.      .--.          ",
-            "    .-(    ). .-(    ).        ",
-            "   (___.__)_) (___.__)_)       ",
+            "       .---.      .---.        ",
+            "    .-(     ). .-(     ).      ",
+            "   (___.___(_)_(___.___(_)     ",
             "                               ",
         ],
     },
     "rain": {
-        "name": "Rain",
-        "primary": "#4A90A4",
-        "accent":  "#6BCB77",
-        "muted":   "#7BA3B5",
+        "name": "[ Animated Melancholy Rain ]",
+        "primary": "#A0C4FF",
+        "accent":  "#BDB2FF",
+        "muted":   "#9BF6FF",
+        "is_animated_rain": True,
         "art": [
-            "       .--.      .--.          ",
-            "    .-(    ). .-(    ).        ",
-            "   (___.__)_) (___.__)_)       ",
-            "    ʻ ʻ ʻ ʻ ʻ  ʻ ʻ ʻ ʻ         ",
-            "   ʻ ʻ ʻ ʻ ʻ ʻ ʻ ʻ ʻ ʻ ʻ       ",
+            "       .---.      .---.        ",
+            "    .-(     ). .-(     ).      ",
+            "   (___.___(_)_(___.___(_)     ",
+            "    '  .  '  .  '  .  '  .       ",
+            "   .  '  .  '  .  '  .  '  .     ",
         ],
     },
     "storm": {
-        "name": "Storm",
-        "primary": "#5E5CE6",
-        "accent":  "#FF6B6B",
-        "muted":   "#8B8BAE",
+        "name": "[ Thunder Spark ]",
+        "primary": "#CAFFBF",
+        "accent":  "#FFADAD",
+        "muted":   "#FDFFB6",
+        "is_animated_storm": True,
         "art": [
-            "       .--.      .--.          ",
-            "    .-(    ). .-(    ).        ",
-            "   (___.__)_) (___.__)_)       ",
-            "    ʻ ʻ ⚡ ʻ ʻ  ʻ ⚡ ʻ ʻ         ",
-            "   ʻ ʻ ʻ ʻ ʻ ʻ ʻ ʻ ʻ ʻ ʻ       ",
+            "       .---.      .---.        ",
+            "    .-(     ). .-(     ).      ",
+            "   (___.___(_)_(___.___(_)     ",
+            "    '  /\\  '  .  '  /\\  '  .     ",
+            "   .  '  .  /\\  .  '  .  /\\  .   ",
         ],
     },
     "snow": {
-        "name": "Snow",
-        "primary": "#E0F7FA",
-        "accent":  "#81D4FA",
-        "muted":   "#B0BEC5",
+        "name": "[ Magical Falling Snow ]",
+        "primary": "#E4C1F9",
+        "accent":  "#F694C1",
+        "muted":   "#8AB6F9",
+        "is_animated_snow": True,
         "art": [
-            "       .--.      .--.          ",
-            "    .-(    ). .-(    ).        ",
-            "   (___.__)_) (___.__)_)       ",
-            "    *  *  *  *  *  *  *        ",
-            "   *  *  *  *  *  *  *  *      ",
+            "       .---.      .---.        ",
+            "    .-(     ). .-(     ).      ",
+            "   (___.___(_)_(___.___(_)     ",
+            "    *     .     *     .        ",
+            " .     *     .     *     .     ",
         ],
     },
     "fog": {
-        "name": "Fog",
-        "primary": "#ADB5BD",
-        "accent":  "#CED4DA",
-        "muted":   "#6C757D",
+        "name": "[ Dreamy Misty Fog ]",
+        "primary": "#D8E2DC",
+        "accent":  "#FFE5D9",
+        "muted":   "#B7B7A4",
+        "is_animated_fog": True,
         "art": [
             "                               ",
             "   ~  ~  ~  ~  ~  ~  ~  ~      ",
@@ -126,49 +132,49 @@ THEMES: Dict[str, Dict] = {
         ],
     },
     "night": {
-        "name": "Night",
-        "primary": "#9B5DE5",
-        "accent":  "#00BBF9",
-        "muted":   "#7B6B8A",
+        "name": "[ Starlit Dream Night ]",
+        "primary": "#BDB2FF",
+        "accent":  "#FFC6FF",
+        "muted":   "#9B5DE5",
         "art": [
             "        *           .          ",
             "   .         *            *    ",
-            "          .        ☾           ",
+            "          .        ( )         ",
             "     *         .         *     ",
             "            .      *           ",
         ],
     },
     "dawn": {
-        "name": "Dawn",
-        "primary": "#FF9A76",
-        "accent":  "#FF6B6B",
-        "muted":   "#E8C4A8",
+        "name": "[ Early Morning Bloom ]",
+        "primary": "#FFC6FF",
+        "accent":  "#FFADAD",
+        "muted":   "#FFD6A5",
         "art": [
             "                               ",
             "              .-.              ",
-            "         — — (   ) — —         ",
+            "         --- ( @ ) ---         ",
             "      ~~~~~~~~~~~~~~~~~~~~     ",
             "                               ",
         ],
     },
     "evening": {
-        "name": "Evening",
-        "primary": "#E07A5F",
-        "accent":  "#F2CC8F",
-        "muted":   "#C9ADA7",
+        "name": "[ Sunset Pastel Glow ]",
+        "primary": "#FFADAD",
+        "accent":  "#FFD6A5",
+        "muted":   "#FDFFB6",
         "art": [
             "                               ",
             "              .-.              ",
-            "         — — (   ) — —         ",
+            "         --- ( # ) ---         ",
             "      ~~~~~~~~~~~~~~~~~~~~     ",
             "                               ",
         ],
     },
     "calm": {
-        "name": "Calm",
-        "primary": "#88C0D0",
-        "accent":  "#81A1C1",
-        "muted":   "#5E81AC",
+        "name": "[ Peaceful Matcha Tea ]",
+        "primary": "#CAFFBF",
+        "accent":  "#9BF6FF",
+        "muted":   "#70C1B3",
         "art": [
             "                               ",
             "   ~     ~     ~     ~     ~   ",
@@ -178,76 +184,76 @@ THEMES: Dict[str, Dict] = {
         ],
     },
     "cozy": {
-        "name": "Cozy",
-        "primary": "#E07A5F",
-        "accent":  "#F2CC8F",
-        "muted":   "#C9ADA7",
+        "name": "[ Animated Cozy Cafe ]",
+        "primary": "#FFD6A5",
+        "accent":  "#FFADAD",
+        "muted":   "#E29578",
+        "is_animated_coffee": True,
         "art": [
-            "                               ",
-            "            (  (               ",
-            "           )  )  )             ",
-            "         (________)            ",
-            "                               ",
+            "             (  ) (  )         ",
+            "              \\ \\ / /          ",
+            "           .------------.      ",
+            "           |   _    _   |\\     ",
+            "           |  (o)  (o)  | ]    ",
+            "           |    ___     |      ",
+            "           \\            /      ",
+            "            `----------'       ",
         ],
     },
     "focus": {
-        "name": "Focus",
-        "primary": "#A3BE8C",
-        "accent":  "#EBCB8B",
-        "muted":   "#8FBCBB",
+        "name": "[ Lo-Fi Study Beats ]",
+        "primary": "#9BF6FF",
+        "accent":  "#CAFFBF",
+        "muted":   "#48CAE4",
         "art": [
             "                               ",
-            "            ┌───┐              ",
-            "            │ · │              ",
-            "            └───┘              ",
+            "            .-.                ",
+            "           ( oo )              ",
+            "            `--'               ",
             "                               ",
         ],
     },
     "dreamy": {
-        "name": "Dreamy",
-        "primary": "#C77DFF",
-        "accent":  "#E0AAFF",
-        "muted":   "#9D4EDD",
+        "name": "[ Magical Cutecore Vibe ]",
+        "primary": "#FFC6FF",
+        "accent":  "#E4C1F9",
+        "muted":   "#BDB2FF",
         "art": [
             "        *     .      *         ",
-            "   .         ✦          .      ",
+            "   .         +          .      ",
             "       .          *            ",
-            "   *        .         ✦        ",
+            "   *        .         +        ",
             "            *     .            ",
         ],
     },
     "matrix": {
-        "name": "Matrix",
-        "primary": "#00FF41",
-        "accent":  "#008F11",
-        "muted":   "#003B00",
+        "name": "[ Cute Cyber Matrix ]",
+        "primary": "#CAFFBF",
+        "accent":  "#9BF6FF",
+        "muted":   "#70C1B3",
         "art": [
-            "   1 0 1 0 1 0 1 0 1 0 1 0     ",
-            "   0 1 0 1 0 1 0 1 0 1 0 1     ",
-            "   1 0 1 0 1 0 1 0 1 0 1 0     ",
-            "   0 1 0 1 0 1 0 1 0 1 0 1     ",
-            "   1 0 1 0 1 0 1 0 1 0 1 0     ",
+            "   + * + * + * + * + * + *     ",
+            "   * + * + * + * + * + * +     ",
+            "   + * + * + * + * + * + *     ",
+            "   * + * + * + * + * + * +     ",
+            "   + * + * + * + * + * + *     ",
         ],
     },
 }
 
-WEATHER_KEYS = ["clear", "sunny", "cloudy", "rain", "storm", "snow", "fog"]
-TIME_KEYS    = ["dawn", "clear", "evening", "night"]
-MOOD_KEYS    = ["calm", "cozy", "focus", "dreamy", "matrix"]
-
 DIGITS = {
-    "0": [" ███ ", "█   █", "█   █", "█   █", " ███ "],
-    "1": ["  █  ", " ██  ", "  █  ", "  █  ", " ███ "],
-    "2": ["████ ", "    █", " ███ ", "█    ", "█████"],
-    "3": ["████ ", "    █", " ███ ", "    █", "████ "],
-    "4": ["█   █", "█   █", "█████", "    █", "    █"],
-    "5": ["█████", "█    ", "████ ", "    █", "████ "],
-    "6": [" ███ ", "█    ", "████ ", "█   █", " ███ "],
-    "7": ["█████", "    █", "   █ ", "  █  ", "  █  "],
-    "8": [" ███ ", "█   █", " ███ ", "█   █", " ███ "],
-    "9": [" ███ ", "█   █", " ████", "    █", " ███ "],
-    ":": ["     ", "  ·  ", "     ", "  ·  ", "     "],
-    " ": ["     ", "     ", "     ", "     ", "     "],
+    "0": [" ████ ", "█    █", "█    █", "█    █", " ████ "],
+    "1": ["  ██  ", "   █  ", "   █  ", "   █  ", " █████"],
+    "2": [" ████ ", "     █", " ████ ", "█     ", " █████"],
+    "3": [" ████ ", "     █", " ████ ", "     █", " ████ "],
+    "4": ["█    █", "█    █", " █████", "     █", "     █"],
+    "5": [" █████", "█     ", " ████ ", "     █", " ████ "],
+    "6": [" ████ ", "█     ", " ████ ", "█    █", " ████ "],
+    "7": [" █████", "     █", "    █ ", "   █  ", "  █   "],
+    "8": [" ████ ", "█    █", " ████ ", "█    █", " ████ "],
+    "9": [" ████ ", "█    █", " █████", "     █", " ████ "],
+    ":": ["      ", "  ..  ", "      ", "  ..  ", "      "],
+    " ": ["      ", "      ", "      ", "      ", "      "],
 }
 
 
@@ -306,7 +312,7 @@ class WeatherCache:
             return self._data
         try:
             url = f"https://wttr.in/{self.location}?format=j1"
-            r = requests.get(url, timeout=6, headers={"User-Agent": "moodclock/1.0"})
+            r = requests.get(url, timeout=6, headers={"User-Agent": "mdc/1.0"})
             r.raise_for_status()
             self._data = r.json()
             self._fetched_at = now
@@ -342,12 +348,14 @@ class MoodClock:
         self.twelve_hour = twelve_hour
         self.running = True
         self.mood_index = 0
+        self.anim_tick = 0
 
         if theme and theme in THEMES:
             self.mode = "mood"
             self.manual_theme = theme
-            if theme in MOOD_KEYS:
-                self.mood_index = MOOD_KEYS.index(theme)
+            mood_keys = list(THEMES.keys())
+            if theme in mood_keys:
+                self.mood_index = mood_keys.index(theme)
 
     def current_key(self) -> str:
         if self.mode == "mood" and self.manual_theme:
@@ -356,13 +364,13 @@ class MoodClock:
             return get_time_theme(datetime.now().hour)
         if self.mode == "weather":
             return self.weather.condition()
-        # auto
         w = self.weather.condition()
         if w in ("rain", "storm", "snow", "fog"):
             return w
         return get_time_theme(datetime.now().hour)
 
     def build_frame(self) -> Panel:
+        self.anim_tick += 1
         now = datetime.now()
         key = self.current_key()
         theme = THEMES.get(key, THEMES["night"])
@@ -376,14 +384,70 @@ class MoodClock:
 
         clock = render_big_time(timestr, style=theme["primary"])
 
-        art_lines = theme.get("art", [])
+        art_lines = list(theme.get("art", []))
+
+        # Animierter Rauch für die größere Kaffeetasse
+        if theme.get("is_animated_coffee"):
+            phase = (self.anim_tick // 2) % 4
+            if phase == 0:
+                art_lines[0] = "             (  ) (  )         "
+                art_lines[1] = "              \\ \\ / /          "
+            elif phase == 1:
+                art_lines[0] = "             ( )   ( )         "
+                art_lines[1] = "              / / \\ \\          "
+            elif phase == 2:
+                art_lines[0] = "              ~ ~   ~ ~        "
+                art_lines[1] = "             (  )   (  )       "
+            else:
+                art_lines[0] = "               ( )   ( )       "
+                art_lines[1] = "              ~ ~   ~ ~        "
+
+        elif theme.get("is_animated_snow"):
+            shift = (self.anim_tick // 2) % 3
+            if shift == 0:
+                art_lines[3] = "    *     .     *     .        "
+                art_lines[4] = " .     *     .     *     .     "
+            elif shift == 1:
+                art_lines[3] = "   *     .     *     .       "
+                art_lines[4] = "     .     *     .     *     "
+            else:
+                art_lines[3] = "      .     *     .     *    "
+                art_lines[4] = "   *     .     *     .       "
+
+        elif theme.get("is_animated_rain"):
+            shift = (self.anim_tick // 2) % 2
+            if shift == 0:
+                art_lines[3] = "    '  .  '  .  '  .  '  .    "
+                art_lines[4] = "   .  '  .  '  .  '  .  '  .  "
+            else:
+                art_lines[3] = "   .  '  .  '  .  '  .  '  .  "
+                art_lines[4] = "    '  .  '  .  '  .  '  .    "
+
+        elif theme.get("is_animated_storm"):
+            shift = (self.anim_tick // 2) % 2
+            if shift == 0:
+                art_lines[3] = "    '  /\\  '  .  '  /\\  '  .   "
+                art_lines[4] = "   .  '  .  /\\  .  '  .  /\\  . "
+            else:
+                art_lines[3] = "    .  '  /\\  '  .  '  /\\  '   "
+                art_lines[4] = "   /\\  .  '  .  /\\  .  '  .   "
+
+        elif theme.get("is_animated_fog"):
+            shift = (self.anim_tick // 3) % 2
+            if shift == 0:
+                art_lines[1] = "   ~  ~  ~  ~  ~  ~  ~  ~      "
+                art_lines[2] = "  ~  ~  ~  ~  ~  ~  ~  ~  ~    "
+            else:
+                art_lines[1] = "  ~  ~  ~  ~  ~  ~  ~  ~  ~    "
+                art_lines[2] = "   ~  ~  ~  ~  ~  ~  ~  ~      "
+
         art = Text()
         for i, line in enumerate(art_lines):
             if i:
                 art.append("\n")
             art.append(line, style=theme["accent"])
 
-        label = Text(theme["name"].upper(), style=theme["primary"])
+        label = Text(theme["name"], style=theme["primary"])
 
         help_text = Text(
             "  m mood   a auto   t time   w weather   s sec   q quit  ",
@@ -401,19 +465,27 @@ class MoodClock:
             Align.center(help_text),
         )
 
+        # Vollbild-Ansicht exakt nach Terminal-Größe
+        term_size = shutil.get_terminal_size((80, 24))
+        panel_width = term_size.columns
+        panel_height = term_size.lines
+
         return Panel(
             body,
+            width=panel_width,
+            height=panel_height,
             border_style=theme["primary"],
             box=box.ROUNDED,
-            padding=(0, 2),
-            title=f"[bold {theme['accent']}]moodclock[/]",
+            padding=(1, 2),
+            title="[bold] mdc [/]",
             title_align="center",
         )
 
     def cycle_mood(self):
         self.mode = "mood"
-        self.mood_index = (self.mood_index + 1) % len(MOOD_KEYS)
-        self.manual_theme = MOOD_KEYS[self.mood_index]
+        mood_keys = list(THEMES.keys())
+        self.mood_index = (self.mood_index + 1) % len(mood_keys)
+        self.manual_theme = mood_keys[self.mood_index]
 
     def handle_key(self, key: str):
         key = key.lower()
@@ -452,9 +524,9 @@ class MoodClock:
 
         try:
             tty.setcbreak(fd)
-            with Live(self.build_frame(), console=self.console, refresh_per_second=4, screen=True) as live:
+            with Live(self.build_frame(), console=self.console, refresh_per_second=6, screen=True) as live:
                 while self.running:
-                    if select.select([sys.stdin], [], [], 0.15)[0]:
+                    if select.select([sys.stdin], [], [], 0.1)[0]:
                         ch = sys.stdin.read(1)
                         self.handle_key(ch)
                     live.update(self.build_frame())
@@ -466,11 +538,11 @@ class MoodClock:
             except Exception:
                 pass
             self.console.clear()
-            self.console.print("[dim]moodclock stopped[/]")
+            self.console.print("[dim]mdc stopped[/]")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Moodclock — time + atmosphere")
+    parser = argparse.ArgumentParser(description="mdc — time + atmosphere")
     parser.add_argument("-l", "--location", default=None, help="Location for weather detection")
     parser.add_argument("-m", "--mode", choices=["auto", "time", "weather", "mood"], default="auto")
     parser.add_argument("-t", "--theme", choices=list(THEMES.keys()), help="Force a theme")
@@ -481,9 +553,9 @@ def main():
 
     if args.list_themes:
         console = Console()
-        console.print("\n[bold]Themes[/]\n")
+        console.print("\n[bold]Themes List[/]\n")
         for k, t in THEMES.items():
-            console.print(f"  {k:10}  {t['name']}")
+            console.print(f"  {k:12}  {t['name']}")
         console.print()
         return
 
